@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,300i,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="stylesheets/style.css">
+    <title>Study App</title> 
+
+
+</head>
+<body>
+<header>
+
+    <ul>
+        <li><a class="active" href="#home">Login</a></li>
+        <li><a href="#news">Uploads</a></li>
+        <li><a href="#contact">Downloads</a></li>
+        <li><a href="#about">Home</a></li>
+    </ul>
+    
+    <div class="container">
+        <div class="timertitle">
+            <h1>Record your Study Time</h1>
+        </div>
+
+        <div id="display">
+            <h2>00:00:00</h2>
+        </div>
+
+        <div class="buttons">
+            <button id="startStop" onclick="startStop()">Start</button> <button id="reset" onclick="reset()">Reset</button> 
+            <form action="" method="post">
+                    <input type="submit" name="trecord" value="Record" />
+            </form>
+            
+        </div>
+
+    </div>
+    
+
+</header>
+
+    <div class="note">
+        <h3>Write A Note</h3>
+        <button class="btn-start">Start Recording</button>
+        <button class="btn-start">Stop Recording</button>
+        <table>
+          <tr>
+            <td colspan="3">
+                <textarea class="output" id="inputTextToSave" cols="80" rows="25"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <td>Filename to Save As:</td>
+            <td><input id="inputFileNameToSaveAs"></input></td>
+            <td><button onclick="saveTextAsFile()">Save Text to File</button></td>
+          </tr>
+        </table>
+
+    </div>
+
+
+
+<div class="second">
+
+    <div class="files">
+        <h3>Upload a Notes File</h3>
+        <input type="file" id="file-input">
+        <p id="status">Please select a file</p>
+       
+        <input type="submit" value="Upload" onclick="uploadEvent()"/>
+        <br>
+        
+       
+    </div>  
+
+    <div class="download">
+      <table>
+        <tr>
+          <td>
+            <select id="rec_mode"></select>
+          </td>
+        </tr>
+      </table>
+      
+      <input type="submit" name="idk" value="Download" onclick="getSelected()" />
+      <form action="/s3Proxy" method="POST">
+        <input id="downloadfile" type="text" name="thisthis"/>
+        <input type="submit" value="Download">
+      </form>
+    </div>
+
+
+   
+
+
+    <div class="email">
+        <div class=emailtext>
+            <h3>Send a reminder to your email</h3>
+        </div>
+        <form action="/email" method="post">
+            Your Email:<br>
+            <input type="text" name="to"><br>
+            Subject:<br>
+            <input type="text" name="subject"><br>
+            Context:<br>
+            <input type="text" name="context"><br>
+            <input type="submit" value="Send Email"/>
+          </form>
+    </div>
+
+</div>   
+    
+</body>
+
+
+
+
+
+<script>
+
+    var filearr = [
+      
+
+    ];
+/*
+    var select = document.getElementById("rec_mode");
+    for(index in filearr) {
+        select.options[select.options.length] = new Option(filearr[index], index);
+    }
+
+*/
+    class SpeechRecognitionApi{
+        constructor(options) {
+            const SpeechToText = window.speechRecognition || window.webkitSpeechRecognition;
+            this.speechApi = new SpeechToText();
+            this.output = options.output ? options.output : document.createElement("div");
+            this.speechApi.continuous = true;
+            this.speechApi.interimResult = false;
+            this.speechApi.onresult = (event) => {
+                var resultIndex = event.resultIndex;
+                var transcript = event.results[resultIndex][0].transcript;
+                this.output.textContent += transcript;
+            }
+        }
+        init(){
+            this.speechApi.start();
+        }
+
+        stop(){
+            this.speechApi.stop();
+        }
+  }
+    window.onload = function () {
+        var speech = new SpeechRecognitionApi({
+            output: document.querySelector(".output")
+        })
+        document.querySelector(".btn-start").addEventListener("click", () => {
+            speech.init();
+        })
+        document.querySelector(".btn-end").addEventListener("click", () => {
+            speech.stop();
+        })
+    }
+  
+
+    /*
+      Function to download local text file
+    */
+    function saveTextAsFile()
+    {
+        var textToSave = document.getElementById("inputTextToSave").value;
+        var textToSaveAsBlob = new Blob([textToSave], {type:"text/plain"});
+        var textToSaveAsURL = window.URL.createObjectURL(textToSaveAsBlob);
+        var fileNameToSaveAs = document.getElementById("inputFileNameToSaveAs").value;
+    
+        var downloadLink = document.createElement("a");
+        downloadLink.download = fileNameToSaveAs;
+        downloadLink.innerHTML = "Download File";
+        downloadLink.href = textToSaveAsURL;
+        downloadLink.onclick = destroyClickedElement;
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+    
+        downloadLink.click();
+    }
+ 
+    function destroyClickedElement(event)
+    {
+        document.body.removeChild(event.target);
+    }
+ 
+    function loadFileAsText()
+    {
+        var fileToLoad = document.getElementById("fileToLoad").files[0];
+    
+        var fileReader = new FileReader();
+        fileReader.onload = function(fileLoadedEvent) 
+        {
+            var textFromFileLoaded = fileLoadedEvent.target.result;
+            document.getElementById("inputTextToSave").value = textFromFileLoaded;
+        };
+        fileReader.readAsText(fileToLoad, "UTF-8");
+    }
+
+    
+
+    /*
+      Function to carry out the actual PUT request to S3 using the signed request from the app.
+    */
+    function uploadFile(file, signedRequest, url){
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', signedRequest);
+      xhr.onreadystatechange = () => {
+        if(xhr.readyState === 4){
+          if(xhr.status === 200){
+            document.getElementById('preview').src = url;
+            document.getElementById('avatar-url').value = url;
+          }
+          else{
+            alert('Could not upload file.');
+          }
+        }
+      };
+      xhr.send(file);
+    }
+
+    /*
+      Function to get the temporary signed request from the app.
+      If request successful, continue to upload the file using this signed
+      request.
+    */
+    function getSignedRequest(file){
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', `/sign-s3?file-name=${file.name}&file-type=${file.type}`);
+
+      var select = document.getElementById("rec_mode");
+      var option = document.createElement('option');
+      option.text = option.value = file.name;
+      select.add(option, 0);
+
+      xhr.onreadystatechange = () => {
+        if(xhr.readyState === 4){
+          if(xhr.status === 200){
+            const response = JSON.parse(xhr.responseText);
+            uploadFile(file, response.signedRequest, response.url);
+          }
+          else{
+            alert('Could not get signed URL.');
+          }
+        }
+      };
+      /*
+      var select = document.getElementById("rec_mode");
+      for(index in filearr) {
+        select.options[select.options.length] = new Option(filearr[index], index);
+      }
+      */
+      xhr.send();
+    }
+
+    /*
+     Function called when file input updated. If there is a file selected, then
+     start upload procedure by asking for a signed request from the app.
+    */
+    function initUpload(){
+      const files = document.getElementById('file-input').files;
+      const file = files[0];
+      if(file == null){
+        return alert('No file selected.');
+      }
+      getSignedRequest(file);
+    }
+
+    /*
+     Bind listeners when the page loads.
+    */
+    (() => {
+        document.getElementById('file-input').onchange = initUpload;
+    })();
+
+
+    function uploadEvent(){
+        alert("Successfully Uploaded File");
+    }
+
+    //FUNCTION TO GET SELECTED FILE TO DOWNLOAD
+    function getSelected(){
+      var sel = document.getElementById('rec_mode');
+      var temp = sel.value;
+      var textcontrol = document.getElementById("downloadfile");
+      textcontrol.value = temp;
+
+    }
+
+    </script>
+
+
+
+</html>
