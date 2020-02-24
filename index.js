@@ -15,7 +15,7 @@ const SECRET = ';
 const filePath = 'downloaded.json';
 
 //S3 bucket name
-const BUCKET_NAME = 'fernandodylan-heroku';
+const BUCKET_NAME = '';
 AWS.config.region = 'us-east-2';
 
 
@@ -34,7 +34,7 @@ let transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user:'testcloudwebsiteemail@gmail.com',
-    pass:'100553363Pby!'
+    pass:''
 
   }
 });
