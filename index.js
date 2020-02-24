@@ -10,8 +10,8 @@ const PORT = process.env.PORT || 5000
 // DEFINE VARIABLES
 
 //AWS Credentials
-const ID = 'AKIAVPJQUNB3APMA665D';
-const SECRET = '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';
+const ID = '';
+const SECRET = ';
 const filePath = 'downloaded.json';
 
 //S3 bucket name
